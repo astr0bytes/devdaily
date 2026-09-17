@@ -6,6 +6,8 @@ from datetime import date
 
 from devdaily.gitstate import RepoState
 
+MAX_FILES = 10
+
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
@@ -33,11 +35,20 @@ def _warnings(s: RepoState) -> list[str]:
     return items
 
 
+def _file_lines(s: RepoState) -> list[str]:
+    files = [f"M {f}" for f in s.modified_files] + [f"? {f}" for f in s.untracked_files]
+    lines = [f"        {f}" for f in files[:MAX_FILES]]
+    if len(files) > MAX_FILES:
+        lines.append(f"        ... and {len(files) - MAX_FILES} more")
+    return lines
+
+
 def _header(since: date) -> str:
     return f"since {DAYS[since.weekday()]} {since.isoformat()}"
 
 
-def render_text(states: list[RepoState], since: date, author: str | None, total: int) -> str:
+def render_text(states: list[RepoState], since: date, author: str | None, total: int,
+                verbose: bool = False) -> str:
     out = [_c(f"devdaily {date.today().isoformat()} ({_header(since)})", "1"),
            f"{total} repositories scanned, author: {author or 'any'}", ""]
     if not states:
@@ -48,6 +59,8 @@ def render_text(states: list[RepoState], since: date, author: str | None, total:
             out.append(_c("    + ", "32") + msg)
         for warn in _warnings(s):
             out.append(_c("    ! ", "33") + warn)
+        if verbose:
+            out += _file_lines(s)
         out.append("")
     nb_commits = sum(len(s.commits) for s in states)
     nb_attention = sum(1 for s in states if s.needs_attention)
@@ -55,7 +68,8 @@ def render_text(states: list[RepoState], since: date, author: str | None, total:
     return "\n".join(out)
 
 
-def render_standup(states: list[RepoState], since: date, author: str | None, total: int) -> str:
+def render_standup(states: list[RepoState], since: date, author: str | None, total: int,
+                   verbose: bool = False) -> str:
     """Markdown summary to paste in Slack or Teams."""
     out = [f"**Stand-up {date.today().isoformat()}** ({_header(since)})", "", "*Done:*"]
     done = [(s.name, msg) for s in states for msg in s.commits]
@@ -66,7 +80,8 @@ def render_standup(states: list[RepoState], since: date, author: str | None, tot
     return "\n".join(out)
 
 
-def render_json(states: list[RepoState], since: date, author: str | None, total: int) -> str:
+def render_json(states: list[RepoState], since: date, author: str | None, total: int,
+                verbose: bool = False) -> str:
     return json.dumps({
         "date": date.today().isoformat(),
         "since": since.isoformat(),
@@ -76,6 +91,7 @@ def render_json(states: list[RepoState], since: date, author: str | None, total:
             "name": s.name, "path": str(s.path), "branch": s.branch, "commits": s.commits,
             "modified": s.modified, "untracked": s.untracked, "ahead": s.ahead, "behind": s.behind,
             "has_upstream": s.has_upstream, "stashes": s.stashes, "stale_branches": s.stale_branches,
+            **({"modified_files": s.modified_files, "untracked_files": s.untracked_files} if verbose else {}),
         } for s in states],
     }, indent=2, ensure_ascii=False)
 

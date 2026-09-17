@@ -22,6 +22,7 @@ python main.py --init-config        # writes ~/.config/devdaily/config.toml
 python main.py                      # repositories listed in the config
 python main.py -r ~/dev -r ~/work   # explicit roots
 python main.py --since 1w -a        # last week, include quiet repositories
+python main.py -v                   # also list modified and untracked files
 python main.py -f standup
 python main.py -f json
 ```

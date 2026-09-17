@@ -23,6 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--author", help="author email (default: git config user.email)")
     parser.add_argument("-f", "--format", choices=sorted(RENDERERS), default="text")
     parser.add_argument("-a", "--all", action="store_true", help="also show repositories with no activity")
+    parser.add_argument("-v", "--verbose", action="store_true", help="list modified and untracked files")
     parser.add_argument("--init-config", action="store_true", help=f"create {CONFIG_PATH}")
     return parser
 
@@ -55,7 +56,7 @@ def main(argv=None) -> int:
     if not args.all:
         states = [s for s in states if s.needs_attention or s.commits]
 
-    print(RENDERERS[args.format](states, since=since, author=author, total=len(repos)))
+    print(RENDERERS[args.format](states, since=since, author=author, total=len(repos), verbose=args.verbose))
     return 0
 
 
