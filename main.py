@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 
@@ -24,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-f", "--format", choices=sorted(RENDERERS), default="text")
     parser.add_argument("-a", "--all", action="store_true", help="also show repositories with no activity")
     parser.add_argument("-v", "--verbose", action="store_true", help="list modified and untracked files")
+    parser.add_argument("-j", "--jobs", type=int, default=8, help="number of repositories scanned in parallel")
     parser.add_argument("--init-config", action="store_true", help=f"create {CONFIG_PATH}")
     return parser
 
@@ -46,12 +48,16 @@ def main(argv=None) -> int:
         print(f"No git repository found in: {', '.join(map(str, roots))}", file=sys.stderr)
         return 1
 
-    states = []
-    for repo in repos:
+    def scan(repo):
         try:
-            states.append(collect_state(repo, since, author, stale_days=config.stale_days))
+            return collect_state(repo, since, author, stale_days=config.stale_days)
         except GitError as exc:
             print(f"warning: {repo}: {exc}", file=sys.stderr)
+            return None
+
+    # map() keeps the input order, so the report stays sorted by path
+    with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        states = [s for s in pool.map(scan, repos) if s is not None]
 
     if not args.all:
         states = [s for s in states if s.needs_attention or s.commits]
