@@ -40,10 +40,10 @@ class RepoState:
                     or self.stashes or self.stale_branches or not self.has_upstream)
 
 
-def git(repo: Path, *args: str, check: bool = True) -> str:
+def git(repo: Path, *args: str, check: bool = True, timeout: int = 30) -> str:
     try:
         result = subprocess.run(["git", "-C", str(repo), *args], capture_output=True,
-                                text=True, encoding="utf-8", errors="replace", timeout=30)
+                                text=True, encoding="utf-8", errors="replace", timeout=timeout)
     except FileNotFoundError:
         raise GitError("git is not installed") from None
     except subprocess.TimeoutExpired:
@@ -51,6 +51,12 @@ def git(repo: Path, *args: str, check: bool = True) -> str:
     if check and result.returncode != 0:
         raise GitError(result.stderr.strip() or f"git {args[0]} failed")
     return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def fetch(repo: Path, timeout: int = 20) -> None:
+    """Update remote-tracking branches so that ahead/behind counts are accurate."""
+    if git(repo, "remote", check=False):
+        git(repo, "fetch", "--quiet", "--prune", timeout=timeout)
 
 
 def git_user_email() -> str | None:

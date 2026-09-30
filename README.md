@@ -23,12 +23,16 @@ python main.py                      # repositories listed in the config
 python main.py -r ~/dev -r ~/work   # explicit roots
 python main.py --since 1w -a        # last week, include quiet repositories
 python main.py -v                   # also list modified and untracked files
+python main.py --fetch              # fetch remotes first, slower but accurate
 python main.py -f standup
 python main.py -f json
 ```
 
 On Monday the default period starts on Friday. `--since` accepts `YYYY-MM-DD`,
 `yesterday`, `today`, `3d` or `2w`.
+
+Ahead/behind counts are computed against the remote-tracking branches as they are
+locally. Use `--fetch` to update them before the scan.
 
 ## Configuration
 

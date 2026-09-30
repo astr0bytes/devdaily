@@ -9,7 +9,7 @@ from pathlib import Path
 
 from devdaily import __version__
 from devdaily.config import CONFIG_PATH, load_config, write_default_config
-from devdaily.gitstate import GitError, collect_state, git_user_email
+from devdaily.gitstate import GitError, collect_state, fetch, git_user_email
 from devdaily.period import last_workday, parse_since
 from devdaily.report import RENDERERS
 from devdaily.workspace import find_repos
@@ -25,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-f", "--format", choices=sorted(RENDERERS), default="text")
     parser.add_argument("-a", "--all", action="store_true", help="also show repositories with no activity")
     parser.add_argument("-v", "--verbose", action="store_true", help="list modified and untracked files")
+    parser.add_argument("--fetch", action="store_true", help="run git fetch in each repository first")
     parser.add_argument("-j", "--jobs", type=int, default=8, help="number of repositories scanned in parallel")
     parser.add_argument("--init-config", action="store_true", help=f"create {CONFIG_PATH}")
     return parser
@@ -49,6 +50,11 @@ def main(argv=None) -> int:
         return 1
 
     def scan(repo):
+        if args.fetch:
+            try:
+                fetch(repo)
+            except GitError as exc:
+                print(f"warning: {repo}: fetch failed: {exc}", file=sys.stderr)
         try:
             return collect_state(repo, since, author, stale_days=config.stale_days)
         except GitError as exc:
