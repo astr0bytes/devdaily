@@ -34,6 +34,12 @@ On Monday the default period starts on Friday. `--since` accepts `YYYY-MM-DD`,
 Ahead/behind counts are computed against the remote-tracking branches as they are
 locally. Use `--fetch` to update them before the scan.
 
+## Tests
+
+```
+python -m unittest
+```
+
 ## Configuration
 
 ```toml
